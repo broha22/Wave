@@ -1,0 +1,10 @@
+{
+	entry = {
+		bundle = wave;
+		cell = PSLinkCell;
+		detail = waveListController;
+		icon = "wave.png";
+		isController = 1;
+		label = Wave;
+	};
+}

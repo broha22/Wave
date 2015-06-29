@@ -2,9 +2,9 @@ Package: com.broganminer.wave
 Name: Wave
 Depends: mobilesubstrate
 Architecture: iphoneos-arm
-Description: An awesome MobileSubstrate tweak!
+Description: ALS Device waking
 Maintainer: Brogan Miner
 Author: Brogan Miner
 Section: Tweaks
-Version: 1.0.0-1
-Installed-Size: 72
+Version: 1.0.1-2
+Installed-Size: 156

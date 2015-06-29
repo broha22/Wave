@@ -12,7 +12,10 @@
 @interface SpringBoard : UIApplication
 - (BOOL)isLocked;
 @end
-
+@interface NSUserDefaults (wave) {
+}
+- (id)objectForKey:(id)key inDomain:(id)d;
+@end
 #include <IOKit/hid/IOHIDEventSystemClient.h>
 #include <IOKit/hid/IOHIDEventSystem.h>
 
@@ -24,12 +27,20 @@ extern "C" {
 	int IOHIDServiceClientSetProperty(IOHIDServiceClientRef, CFStringRef, CFNumberRef);
 
 } 
-
+static BOOL enable(void) {
+    NSNumber *enable = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"enable" inDomain:@"com.broganminer.wave"];
+    return (enable)? [enable boolValue]:YES;
+}
+static NSString *sens(void) {
+    NSString *sens = (NSString *)[[NSUserDefaults standardUserDefaults] objectForKey:@"sensitivity" inDomain:@"com.broganminer.anchor"];
+    return (sens)? sens:@"normal";
+}
 static BOOL waved;
 static NSMutableArray *array = [[NSMutableArray alloc] init];
 
 static IOHIDEventSystemClientRef ALSSystem;
 static IOHIDServiceClientRef ALSService;
+static CGFloat sensitivity = 0.45;
 static void wake(void);
 static void handleALS(void* target, void* refcon, IOHIDEventQueueRef queue, IOHIDEventRef event) {
 	if (IOHIDEventGetType(event) == kIOHIDEventTypeAmbientLightSensor) { 
@@ -46,7 +57,7 @@ static void handleALS(void* target, void* refcon, IOHIDEventQueueRef queue, IOHI
 		}
 		lastBright = lastBright/[array count];
 		
-		if (channel1 < (lastBright-lastBright*0.3) && !waved) {
+		if (channel1 < (lastBright-lastBright*sensitivity) && !waved) {
 			/*hand moves over sensor*/
 			waved = YES;
 		}
@@ -59,6 +70,15 @@ static void handleALS(void* target, void* refcon, IOHIDEventQueueRef queue, IOHI
 }
 
 static void runALSListener(void) {
+	if ([sens() isEqual:@"low"]) {
+		sensitivity = 0.65;
+	}
+	else if ([sens() isEqual:@"high"]) {
+		sensitivity = 0.3;
+	}
+	else {
+		sensitivity = 0.45;
+	}
 	/*set page and usagepage of apropriate IOKit sensor, information available through ioreg (or most are on the iphonedevwiki)*/
 	int page = 0xff00;
 	int usage = 4;
@@ -106,7 +126,7 @@ static void wake(void){
 }
 static void locked(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo){
 	/*start the sesnor again on lock of the device*/
-	if(!ALSSystem)runALSListener();
+	if(!ALSSystem && enable())runALSListener();
 }
 %hook SBLockScreenViewController
 /*Screen unlocked, stops running the light sensor*/
@@ -120,7 +140,7 @@ static void locked(CFNotificationCenterRef center, void *observer, CFStringRef n
 
 %ctor {
 	/*starts light sensor at the springboard restart*/
-	runALSListener();
+	if(enable())runALSListener();
 	/*register for screen locks*/
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (locked), CFSTR("com.apple.springboard.lockstate"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 }
